@@ -147,13 +147,13 @@ modules:
         dest-filename: apply_extra
         commands:
           - ar x 'workspacesclient.deb' data.tar.xz
-          - tar xf data.tar.xz ./usr ./opt
+          - tar xf data.tar.xz ./usr
           - rm -f data.tar.xz
           - mkdir -p opt/workspacesclient/pcoip-client/vchan_plugins
           - cp usr/lib/x86_64-linux-gnu/pcoip-client/vchan_plugins/libvchan-plugin-clipboard.so
             opt/workspacesclient/pcoip-client/vchan_plugins
-          - mv opt/workspacesclient ./bin
-          - rm -rf usr opt
+          - mv usr/bin/workspacesclient ./bin
+          - rm -rf usr
 
       - type: file
         path: com.amazon.Workspaces.metainfo.xml
@@ -165,8 +165,8 @@ modules:
       - type: extra-data
         filename: workspacesclient.deb
         only-arches: [x86_64]
-        url: https://d3nt0h4h6pmmc4.cloudfront.net/ubuntu/dists/focal/main/binary-amd64/workspacesclient_4.7.0.4312_amd64.deb
-        sha256: 1b4a39b859c49225169a44cc507955722770fb6c7c7bf2a631f54113ba0b5d5f
+        url: https://d3nt0h4h6pmmc4.cloudfront.net/ubuntu/dists/focal/main/binary-amd64/workspacesclient_2024.1.4807_amd64.deb
+        sha256: defb0c72771da966681495e7a68ea7207f8e5158bb028c6ca9e7720ddcef7acb
         size: 46652448
         x-checker-data:
           type: debian-repo
