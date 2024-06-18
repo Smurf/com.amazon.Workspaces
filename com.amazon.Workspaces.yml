@@ -12,8 +12,8 @@ finish-args:
   - --share=ipc
   - --device=dri
   - --socket=pulseaudio
-  - --share=network
-  - --env=LD_LIBRARY_PATH=/app/extra/bin
+  - --env=LD_LIBRARY_PATH=/app/lib
+  - --env=XDG_DATA_DIRS=/usr/local/share:/usr/share:/app/share
 
 cleanup:
   - '*.a'
@@ -132,15 +132,31 @@ modules:
   - name: workspacesclient
     buildsystem: simple
     build-commands:
-      - mkdir -p ${FLATPAK_DEST}/bin ${FLATPAK_DEST}/lib
+      # Make dirs and copy over ar for extraction
+      - mkdir -p ${FLATPAK_DEST}/bin ${FLATPAK_DEST}/lib ${FLATPAK_DEST}/share/mime
+      - cp /usr/bin/ar ${FLATPAK_DEST}/bin
+      # Extract deb and move required files
       - install apply_extra ${FLATPAK_DEST}/bin
+      #Copy over XDG files
       - install -Dm644 -t ${FLATPAK_DEST}/share/metainfo/ ${FLATPAK_ID}.metainfo.xml
       - install -Dm644 -t ${FLATPAK_DEST}/share/applications/ ${FLATPAK_ID}.desktop
       - install -Dm644 -t ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/ ${FLATPAK_ID}.svg
-      - cp /usr/bin/ar ${FLATPAK_DEST}/bin
       - ARCH_TRIPLE=$(gcc --print-multiarch) && cp -a /usr/lib/${ARCH_TRIPLE}/libbfd-*.so
         ${FLATPAK_DEST}/lib && cp -a /usr/lib/${ARCH_TRIPLE}/libsframe.so* ${FLATPAK_DEST}/lib
-      - ln -s ${FLATPAK_DEST}/extra/bin/workspacesclient ${FLATPAK_DEST}/bin/workspacesclient
+      # Create folders for linking directories and files in extra/
+      - mkdir -p ${FLATPAK_DEST}/share/workspacesclient/
+      - mkdir -p ${FLATPAK_DEST}/share/glib-2.0
+      - mkdir -p ${FLATPAK_DEST}/lib
+      # Symlink files required in extra/
+      - ln -s ${FLATPAK_DEST}/extra/workspacesclient ${FLATPAK_DEST}/bin/workspacesclient
+      - ln -s ${FLATPAK_DEST}/extra/schemas ${FLATPAK_DEST}/share/glib-2.0/schemas
+      - ln -s ${FLATPAK_DEST}/extra/pixmaps ${FLATPAK_DEST}/share/pixmaps
+      - ln -s ${FLATPAK_DEST}/extra/lib/workspacesclient ${FLATPAK_DEST}/lib/workspacesclient
+      - ln -s ${FLATPAK_DEST}/extra/lib/pcoip-client ${FLATPAK_DEST}/lib/pcoip-client
+      # Must update icon cache and desktop database to create mime info
+      - update-desktop-database ${FLATPAK_DEST}/share/applications
+      - gtk-update-icon-cache
+      - desktop-file-install --rebuild-mime-info-cache --dir=/app/share/applications com.amazon.Workspaces.desktop
 
     sources:
       - type: script
@@ -149,11 +165,14 @@ modules:
           - ar x 'workspacesclient.deb' data.tar.xz
           - tar xf data.tar.xz ./usr
           - rm -f data.tar.xz
-          - mkdir -p opt/workspacesclient/pcoip-client/vchan_plugins
-          - cp usr/lib/x86_64-linux-gnu/pcoip-client/vchan_plugins/libvchan-plugin-clipboard.so
-            opt/workspacesclient/pcoip-client/vchan_plugins
-          - mv usr/bin/workspacesclient ./bin
+          # Compiling schemas is required with new workspaces versions
+          - mv usr/share/glib-2.0/schemas .
+          - glib-compile-schemas schemas
+          - mv usr/share/pixmaps .
+          - mv usr/bin/workspacesclient workspacesclient
+          - mv usr/lib/x86_64-linux-gnu lib
           - rm -rf usr
+          - rm -f workspacesclient.deb
 
       - type: file
         path: com.amazon.Workspaces.metainfo.xml
@@ -167,7 +186,7 @@ modules:
         only-arches: [x86_64]
         url: https://d3nt0h4h6pmmc4.cloudfront.net/ubuntu/dists/focal/main/binary-amd64/workspacesclient_2024.1.4807_amd64.deb
         sha256: defb0c72771da966681495e7a68ea7207f8e5158bb028c6ca9e7720ddcef7acb
-        size: 46652448
+        size: 98849560
         x-checker-data:
           type: debian-repo
           package-name: workspacesclient
